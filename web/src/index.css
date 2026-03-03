@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+button:hover {
+    @apply cursor-pointer;
+}
+
+button:disabled {
+    @apply cursor-not-allowed;
+    @apply opacity-50;
+}
+
+input:disabled {
+    @apply cursor-not-allowed;
+    @apply opacity-50;
+}
+
+input,
+button {
+    transition: opacity 0.3s ease-in-out;
+}
