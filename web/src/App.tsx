@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { TRANSITION } from "./constants/transition";
+import { Eye, EyeOff } from "lucide-react";
 
 function App() {
     const [url, setUrl] = useState("");
@@ -16,6 +17,7 @@ function App() {
     };
     const handleChangeWithPassword = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm((prev) => ({ ...prev, withPassword: e.target.checked }));
+        setIsVisibleTextPassword(false);
     };
     const handleChangePasswordForm = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm((prev) => ({ ...prev, password: e.target.value }));
@@ -26,6 +28,10 @@ function App() {
         withPassword: false,
     });
     const isValid = form.name && (!form.withPassword || (form.withPassword && form.password));
+    const [isVisibleTextPassword, setIsVisibleTextPassword] = useState(false);
+    const handleClickVisiblePassword = () => {
+        setIsVisibleTextPassword((prev) => !prev);
+    };
 
     return (
         <div className="px-4 mx-auto container">
@@ -46,16 +52,29 @@ function App() {
                             />
                         </div>
                         <div>
-                            <input
-                                type="password"
-                                placeholder="Enter password..."
-                                className="border border-gray-300 rounded px-3 py-2"
-                                value={form.password}
-                                onChange={handleChangePasswordForm}
-                                maxLength={32}
-                                disabled={!form.withPassword}
-                                required={form.withPassword}
-                            />
+                            <div className="relative">
+                                <input
+                                    type={isVisibleTextPassword ? "text" : "password"}
+                                    placeholder="Enter password..."
+                                    className="w-full peer border border-gray-300 rounded pl-3 py-2 pr-12"
+                                    value={form.password}
+                                    onChange={handleChangePasswordForm}
+                                    maxLength={32}
+                                    disabled={!form.withPassword}
+                                    required={form.withPassword}
+                                />
+                                {isVisibleTextPassword ? (
+                                    <Eye
+                                        className="absolute top-1/2 right-4 text-gray-500 cursor-pointer -translate-y-1/2 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed select-none"
+                                        onClick={handleClickVisiblePassword}
+                                    />
+                                ) : (
+                                    <EyeOff
+                                        className="absolute top-1/2 right-4 text-gray-500 cursor-pointer -translate-y-1/2 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed select-none"
+                                        onClick={handleClickVisiblePassword}
+                                    />
+                                )}
+                            </div>
                         </div>
                         <div className="flex gap-4">
                             <div className="inline-flex items-center gap-2">
