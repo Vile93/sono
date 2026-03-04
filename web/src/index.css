@@ -14,7 +14,6 @@ input:disabled {
     @apply opacity-50;
 }
 
-input,
-button {
-    transition: opacity 0.3s ease-in-out;
+.primary {
+    @apply w-full mt-4 bg-linear-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98];
 }

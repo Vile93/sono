@@ -1,19 +1,27 @@
 import { createBrowserRouter } from "react-router-dom";
-import CreateRoomPage from "../pages/CreateRoomPage";
+import HomePage from "../pages/HomePage/HomePage";
 import NotFound from "../pages/NotFound";
+import Layout from "../layouts/Layout";
+import RoomPage from "../pages/RoomPage";
 
 export const router = createBrowserRouter([
     {
         path: "/",
-        element: <CreateRoomPage />,
-    },
-    {
-        path: "/rooms/:id",
-        element: <div>Room</div>,
-    },
-    {
-        path: "*",
-        element: <NotFound />,
+        element: <Layout />,
+        children: [
+            {
+                index: true,
+                element: <HomePage />,
+            },
+            {
+                path: "/rooms/:id",
+                element: <RoomPage />,
+            },
+            {
+                path: "*",
+                element: <NotFound />,
+            },
+        ],
     },
 ]);
 

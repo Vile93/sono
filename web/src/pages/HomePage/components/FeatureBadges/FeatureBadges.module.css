@@ -1,0 +1,17 @@
+@reference "../../../../index.css";
+
+.featureBadge {
+    @apply flex items-center gap-2;
+}
+
+.featureBadgeText {
+    @apply text-sm text-slate-300;
+}
+
+.featureBadgeIcon {
+    @apply w-2 h-2 animate-pulse rounded-full;
+}
+
+.verticalLine {
+    @apply hidden md:block w-px h-4 bg-slate-700;
+}
