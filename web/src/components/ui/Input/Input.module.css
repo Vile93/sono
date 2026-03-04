@@ -1,3 +1,5 @@
+@reference "../../../index.css";
+
 .input:disabled ~ div {
     opacity: 0.5;
     cursor: not-allowed;
@@ -5,4 +7,9 @@
 
 .input:disabled ~ div .icon {
     pointer-events: none;
+}
+
+.icon {
+    @apply text-gray-500 select-none;
+    @apply cursor-pointer;
 }

@@ -25,15 +25,9 @@ const Input = ({
             {isPasswordType && (
                 <div className="absolute top-1/2 right-4 -translate-y-1/2">
                     {isVisibleTextPassword ? (
-                        <Eye
-                            className={`${styles.icon} text-gray-500 cursor-pointer peer-disabled:opacity-50 select-none`}
-                            onClick={handleClickVisiblePassword}
-                        />
+                        <Eye className={`${styles.icon}`} onClick={handleClickVisiblePassword} />
                     ) : (
-                        <EyeOff
-                            className={`${styles.icon} text-gray-500 cursor-pointer peer-disabled:opacity-50 select-none`}
-                            onClick={handleClickVisiblePassword}
-                        />
+                        <EyeOff className={`${styles.icon}`} onClick={handleClickVisiblePassword} />
                     )}
                 </div>
             )}
