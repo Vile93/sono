@@ -1,0 +1,8 @@
+.input:disabled ~ div {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.input:disabled ~ div .icon {
+    pointer-events: none;
+}
