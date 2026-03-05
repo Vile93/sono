@@ -9,8 +9,10 @@ import { useCopy } from "../../hooks/use-copy";
 import { useRtcStore } from "../../store/rtc.store";
 import { useSocketStore } from "../../store/socket.store";
 import Client from "./components/Client";
+import { useSettingsStore } from "../../store/settings.store";
 
 const RoomPage = () => {
+    const { settings } = useSettingsStore();
     const { socket } = useSocketStore();
     const [isLoading, setIsLoading] = useState(true);
     const [isRoomExist, setIsRoomExist] = useState(false);
@@ -18,6 +20,24 @@ const RoomPage = () => {
     const { copyToClipboard, isCopied } = useCopy();
     const navigate = useNavigate();
     const [isMuted, setIsMuted] = useState(true);
+    const [peerName, setPeerName] = useState<string>("");
+    const pcRef = useRef<RTCPeerConnection | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const { audio } = useRtcStore();
+    const clearRtc = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+        }
+        if (pcRef.current) {
+            pcRef.current.close();
+        }
+        if (socket) {
+            socket.off("candidate");
+            socket.off("answer");
+            socket.off("offer");
+            socket.off("roomData");
+        }
+    };
     const handleMuteToggle = () => {
         setIsMuted((prev) => !prev);
         if (!streamRef.current) return;
@@ -28,8 +48,7 @@ const RoomPage = () => {
             streamRef.current?.getAudioTracks().forEach((track) => (track.enabled = true));
         }
     };
-    const { audio } = useRtcStore();
-    const streamRef = useRef<MediaStream | null>(null);
+
     const handleExit = () => {
         if (socket) {
             socket.once("roomExited", () => {
@@ -55,6 +74,7 @@ const RoomPage = () => {
         const initializeConnection = async () => {
             if (socket && audio) {
                 const pc = new RTCPeerConnection();
+                pcRef.current = pc;
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: {
                         echoCancellation: true,
@@ -76,8 +96,48 @@ const RoomPage = () => {
                         await audio.play();
                     }
                 };
+                const channel = pc.createDataChannel("chat");
+                channel.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    if (message.type === "settings") {
+                        setPeerName(message.username || "Anonymous");
+                    }
+                };
+                pc.ondatachannel = (event) => {
+                    const receiveChannel = event.channel;
+                    receiveChannel.onopen = () => {
+                        receiveChannel.send(
+                            JSON.stringify({
+                                type: "settings",
+                                username: settings.username,
+                            }),
+                        );
+                    };
+                    receiveChannel.onmessage = (event) => {
+                        const message = JSON.parse(event.data);
+                        if (message.type === "settings") {
+                            setPeerName(message.username || "Anonymous");
+                        }
+                    };
+                };
+
                 socket.once("roomData", async ({ users }) => {
                     if (users >= 2) {
+                        const channel = pc.createDataChannel("chat");
+                        channel.onmessage = (event) => {
+                            const message = JSON.parse(event.data);
+                            if (message.type === "settings") {
+                                setPeerName(message.username || "Anonymous");
+                            }
+                        };
+                        channel.onopen = () => {
+                            channel.send(
+                                JSON.stringify({
+                                    type: "settings",
+                                    username: settings.username,
+                                }),
+                            );
+                        };
                         const offer = await pc.createOffer();
                         await pc.setLocalDescription(offer);
                         socket.emit("offer", offer);
@@ -85,7 +145,9 @@ const RoomPage = () => {
                 });
                 socket.emit("roomData", roomId);
                 socket.on("candidate", async (candidate: RTCIceCandidateInit) => {
-                    await pc.addIceCandidate(candidate);
+                    if (pc.remoteDescription && candidate) {
+                        await pc.addIceCandidate(candidate);
+                    }
                 });
                 socket.on("answer", async (answer: RTCSessionDescriptionInit) => {
                     console.log("Received answer:", answer);
@@ -97,18 +159,19 @@ const RoomPage = () => {
                     await pc.setLocalDescription(answer);
                     socket.emit("answer", answer);
                 });
+                pc.onconnectionstatechange = () => {
+                    console.log("state", pc.connectionState);
+                    if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+                        clearRtc();
+                        initializeConnection();
+                        console.log("reconnect");
+                    }
+                };
             }
         };
         initializeConnection();
         return () => {
-            if (socket) {
-                socket.off("candidate");
-                socket.off("answer");
-                socket.off("offer");
-            }
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach((track) => track.stop());
-            }
+            clearRtc();
         };
     }, [audio]);
     if (isLoading) {
@@ -127,11 +190,11 @@ const RoomPage = () => {
                     <div className=" flex-1 flex flex-col md:flex-row gap-4">
                         <Client
                             icon={<User className="w-12 h-12 text-blue-400" />}
-                            name="Anonymous"
+                            name={`${settings.username}`}
                         />
                         <Client
                             icon={<User className="w-12 h-12 text-cyan-400" />}
-                            name="Anonymous"
+                            name={`${peerName}` || "Anonymous"}
                         />
                     </div>
                 </div>

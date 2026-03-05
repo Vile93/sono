@@ -12,7 +12,7 @@ export const useSocket = () => {
                 console.log("Connected to server");
             });
             newSocket.onAny((event, ...args) => {
-                console.log("Received event:", event, "with data:", args);
+                /*  console.log("Received event:", event, "with data:", args); */
                 setSocketPayload({ type: event, data: args[0] });
             });
             newSocket.on("disconnect", () => {
