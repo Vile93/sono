@@ -1,15 +1,36 @@
-import { Video, ArrowRight } from "lucide-react";
+import { ArrowRight, Video } from "lucide-react";
 import React from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { ROUTES } from "../../../../constants/router";
 import { useRoomStore } from "../../../../store/room.store";
+import { useSocketStore } from "../../../../store/socket.store";
+import Input from "../../../../components/ui/Input/Input";
 
 const JoinRoom = () => {
     const { roomId, setRoomId } = useRoomStore();
+    const { socket } = useSocketStore();
+    const navigate = useNavigate();
     const handleJoinRoom = () => {
-        console.log("Joining room:", roomId);
+        if (socket) {
+            const onRoomNotFound = () => {
+                toast("Room not found.\nPlease check the room code and try again.", {
+                    type: "error",
+                });
+            };
+            const onJoined = () => {
+                socket.off("roomNotFound", onRoomNotFound);
+                navigate(ROUTES.ROOM(roomId));
+            };
+            socket.once("userJoined", onJoined);
+            socket.once("roomNotFound", onRoomNotFound);
+            socket.emit("joinRoom", roomId);
+        }
     };
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setRoomId(e.target.value.toUpperCase());
     };
+
     return (
         <div className="flex flex-col justify-between bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-500/10">
             <div>
@@ -29,13 +50,12 @@ const JoinRoom = () => {
                     >
                         Room ID
                     </label>
-                    <input
+                    <Input
                         id="roomInput"
                         type="text"
                         value={roomId}
                         onChange={handleInputChange}
                         placeholder="Enter room ID"
-                        className="w-full bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all font-mono tracking-wider"
                     />
                 </div>
             </div>

@@ -11,9 +11,9 @@ export const useSocket = () => {
             newSocket.on("connect", () => {
                 console.log("Connected to server");
             });
-            newSocket.on("roomCreated", (roomId: string) => {
-                console.log("Room created with ID:", roomId);
-                setSocketPayload({ type: "roomCreated", data: roomId });
+            newSocket.onAny((event, ...args) => {
+                console.log("Received event:", event, "with data:", args);
+                setSocketPayload({ type: event, data: args[0] });
             });
             newSocket.on("disconnect", () => {
                 console.log("Disconnected from server");

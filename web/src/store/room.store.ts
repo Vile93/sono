@@ -15,6 +15,9 @@ export const useRoomStore = create<RoomStore>()(
         }),
         {
             name: STORAGE.ROOM,
+            partialize: (state) => ({
+                roomId: state.roomId,
+            }),
         },
     ),
 );

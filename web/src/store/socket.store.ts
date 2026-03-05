@@ -3,7 +3,13 @@ import { create } from "zustand";
 
 type SocketStore = {
     socketPayload: {
-        type: "roomCreated" | "roomNotFound" | "roomFull" | "userJoined";
+        type:
+            | "roomCreated"
+            | "roomNotFound"
+            | "roomFull"
+            | "userJoined"
+            | "joinSuccess"
+            | "roomExists";
         data: string;
     } | null;
     setSocketPayload: (payload: SocketStore["socketPayload"]) => void;
