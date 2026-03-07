@@ -22,7 +22,7 @@ const JoinRoom = () => {
                 socket.off("roomNotFound", onRoomNotFound);
                 navigate(ROUTES.ROOM(roomId));
             };
-            socket.once("userJoined", onJoined);
+            socket.once("joinedRoom", onJoined);
             socket.once("roomNotFound", onRoomNotFound);
             socket.emit("joinRoom", roomId);
         }

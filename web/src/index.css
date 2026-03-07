@@ -9,7 +9,8 @@ button:disabled {
     @apply opacity-50;
 }
 
-input:disabled {
+input:disabled,
+select:disabled {
     @apply cursor-not-allowed;
     @apply opacity-50;
 }

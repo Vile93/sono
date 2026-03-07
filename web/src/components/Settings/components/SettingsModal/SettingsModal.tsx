@@ -15,7 +15,7 @@ const SettingsModal = () => {
                 className="fixed bg-black/50 backdrop-blur-sm z-40 inset-0"
                 onClick={hideSettings}
             ></div>
-            <div className="w-120 fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 flex items-center justify-center z-50 p-4">
+            <div className="w-full sm:w-120 fixed -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 flex items-center justify-center z-50 p-4">
                 <div className="bg-linear-to-br from-slate-800 to-slate-900 rounded-2xl border border-white/10 w-full max-w-md shadow-2xl">
                     <div className="flex items-center justify-between p-6 border-b border-white/10">
                         <h2 className="text-xl font-bold text-white">Settings</h2>
@@ -34,6 +34,7 @@ const SettingsModal = () => {
                                 Language
                             </label>
                             <Select
+                                disabled
                                 value={settings.language}
                                 onChange={(e) => handleChange("language", String(e.target.value))}
                                 options={[
@@ -64,6 +65,7 @@ const SettingsModal = () => {
                                 Preferred Server
                             </label>
                             <Input
+                                disabled
                                 type="text"
                                 value={settings.server}
                                 onChange={(e) => handleChange("server", e.target.value)}

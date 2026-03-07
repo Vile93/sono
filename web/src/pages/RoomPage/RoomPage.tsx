@@ -1,15 +1,16 @@
 import { CheckCircle2, Copy, Mic, MicOff, Phone, User } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Audio from "../../components/Audio/Audio";
 import Loader from "../../components/Loader/Loader";
 import StatusPage from "../../components/StatusPage/StatusPage";
 import { ROUTES } from "../../constants/router";
+import { useAudioStream } from "../../hooks/use-audio-stream";
 import { useCopy } from "../../hooks/use-copy";
 import { useRtcStore } from "../../store/rtc.store";
+import { useSettingsStore } from "../../store/settings.store";
 import { useSocketStore } from "../../store/socket.store";
 import Client from "./components/Client";
-import { useSettingsStore } from "../../store/settings.store";
 
 const RoomPage = () => {
     const { settings } = useSettingsStore();
@@ -20,13 +21,51 @@ const RoomPage = () => {
     const { copyToClipboard, isCopied } = useCopy();
     const navigate = useNavigate();
     const [isMuted, setIsMuted] = useState(true);
+    const isMutedRef = useRef<boolean>(isMuted);
+    const [isPeerConnected, setIsPeerConnected] = useState(false);
     const [peerName, setPeerName] = useState<string>("");
-    const pcRef = useRef<RTCPeerConnection | null>(null);
-    const streamRef = useRef<MediaStream | null>(null);
+    const pcRef = useRef<RTCPeerConnection>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [peerStream, setPeerStream] = useState<MediaStream | null>(null);
+    const myClientRef = useRef<HTMLDivElement>(null);
+    const peerClientRef = useRef<HTMLDivElement>(null);
+    const [channel, setChannel] = useState<RTCDataChannel | null>(null);
+    const onSpeakingChange = useCallback(
+        (isSpeaking: boolean, isSpeakTimer: RefObject<number | null>, isPeer: boolean) => {
+            if (isPeer) {
+                console.log("speaking", isSpeaking);
+            }
+            const clientRef = isPeer ? peerClientRef : myClientRef;
+            if (!clientRef.current) return;
+            if (isSpeaking) {
+                clientRef.current.classList.add("border-cyan-400!", "border-2!");
+                if (isSpeakTimer && isSpeakTimer.current) {
+                    clearTimeout(isSpeakTimer.current);
+                }
+            } else {
+                isSpeakTimer.current = setTimeout(() => {
+                    if (clientRef.current) {
+                        clientRef.current.classList.remove("border-cyan-400!", "border-2!");
+                    }
+                }, 800);
+            }
+        },
+        [],
+    );
+    useAudioStream({
+        stream,
+        onSpeakingChange: (isSpeaking, isSpeakTimer) =>
+            onSpeakingChange(isSpeaking, isSpeakTimer, false),
+    });
+    useAudioStream({
+        stream: peerStream,
+        onSpeakingChange: (isSpeaking, isSpeakTimer) =>
+            onSpeakingChange(isSpeaking, isSpeakTimer, true),
+    });
     const { audio } = useRtcStore();
     const clearRtc = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach((track) => track.stop());
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
         }
         if (pcRef.current) {
             pcRef.current.close();
@@ -36,16 +75,23 @@ const RoomPage = () => {
             socket.off("answer");
             socket.off("offer");
             socket.off("roomData");
+            socket.off("userJoined");
+            socket.off("userExited");
         }
+        setIsPeerConnected(false);
+        setStream(null);
+        setPeerStream(null);
+        setChannel(null);
     };
     const handleMuteToggle = () => {
         setIsMuted((prev) => !prev);
-        if (!streamRef.current) return;
-        const isCurrentMuted = !isMuted;
-        if (isCurrentMuted) {
-            streamRef.current?.getAudioTracks().forEach((track) => (track.enabled = false));
+        const newMutedState = !isMutedRef.current;
+        isMutedRef.current = newMutedState;
+        if (!stream) return;
+        if (newMutedState) {
+            stream.getAudioTracks().forEach((track) => (track.enabled = false));
         } else {
-            streamRef.current?.getAudioTracks().forEach((track) => (track.enabled = true));
+            stream.getAudioTracks().forEach((track) => (track.enabled = true));
         }
     };
 
@@ -67,9 +113,21 @@ const RoomPage = () => {
                 setIsLoading(false);
                 setIsRoomExist(isRoomExist);
             });
+
             socket.emit("roomCheck", roomId);
         }
     }, [roomId, socket]);
+    useEffect(() => {
+        if (channel && channel.readyState === "open") {
+            console.log("send", settings);
+            channel.send(
+                JSON.stringify({
+                    type: "settings",
+                    username: settings.username,
+                }),
+            );
+        }
+    }, [channel, settings.username]);
     useEffect(() => {
         const initializeConnection = async () => {
             if (socket && audio) {
@@ -83,7 +141,8 @@ const RoomPage = () => {
                     },
                 });
                 stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-                streamRef.current = stream;
+                stream.getAudioTracks().forEach((track) => (track.enabled = !isMutedRef.current));
+                setStream(stream);
                 pc.onicecandidate = (event) => {
                     if (event.candidate && socket) {
                         socket.emit("candidate", event.candidate);
@@ -91,6 +150,8 @@ const RoomPage = () => {
                 };
                 pc.ontrack = async (event) => {
                     const remoteStream = event.streams[0];
+                    console.log("peer stream was changed");
+                    setPeerStream(remoteStream);
                     if (audio) {
                         audio.srcObject = remoteStream;
                         await audio.play();
@@ -105,6 +166,7 @@ const RoomPage = () => {
                 };
                 pc.ondatachannel = (event) => {
                     const receiveChannel = event.channel;
+                    setChannel(receiveChannel);
                     receiveChannel.onopen = () => {
                         receiveChannel.send(
                             JSON.stringify({
@@ -119,11 +181,16 @@ const RoomPage = () => {
                             setPeerName(message.username || "Anonymous");
                         }
                     };
+                    receiveChannel.onclose = () => {
+                        setChannel(null);
+                    };
                 };
 
                 socket.once("roomData", async ({ users }) => {
                     if (users >= 2) {
                         const channel = pc.createDataChannel("chat");
+                        setIsPeerConnected(true);
+                        setChannel(channel);
                         channel.onmessage = (event) => {
                             const message = JSON.parse(event.data);
                             if (message.type === "settings") {
@@ -138,10 +205,21 @@ const RoomPage = () => {
                                 }),
                             );
                         };
+                        channel.onclose = () => {
+                            setChannel(null);
+                        };
                         const offer = await pc.createOffer();
                         await pc.setLocalDescription(offer);
                         socket.emit("offer", offer);
                     }
+                });
+                socket.on("userJoined", () => {
+                    setIsPeerConnected(true);
+                });
+                socket.on("userExited", () => {
+                    setIsPeerConnected(false);
+                    clearRtc();
+                    initializeConnection();
                 });
                 socket.emit("roomData", roomId);
                 socket.on("candidate", async (candidate: RTCIceCandidateInit) => {
@@ -174,6 +252,7 @@ const RoomPage = () => {
             clearRtc();
         };
     }, [audio]);
+
     if (isLoading) {
         return <Loader />;
     }
@@ -186,23 +265,29 @@ const RoomPage = () => {
         <div className="flex flex-1 w-full overflow-hidden">
             <Audio />
             <div className="flex-1 flex flex-col">
-                <div className="flex-1 flex flex-col justify-between gap-4 p-6 overflow-hidden">
+                <div className="flex-1 flex flex-col justify-between gap-4 p-3 sm:p-6 overflow-hidden">
                     <div className=" flex-1 flex flex-col md:flex-row gap-4">
                         <Client
+                            ref={myClientRef}
                             icon={<User className="w-12 h-12 text-blue-400" />}
                             name={`${settings.username}`}
                         />
-                        <Client
-                            icon={<User className="w-12 h-12 text-cyan-400" />}
-                            name={`${peerName}` || "Anonymous"}
-                        />
+                        {isPeerConnected && (
+                            <Client
+                                ref={peerClientRef}
+                                icon={<User className="w-12 h-12 text-cyan-400" />}
+                                name={`${peerName}` || "Anonymous"}
+                            />
+                        )}
                     </div>
                 </div>
 
-                <div className="bg-linear-to-t from-slate-900 via-slate-900 to-transparent border-t border-white/10 px-6 py-4">
+                <div className="bg-linear-to-t from-slate-900 via-slate-900 to-transparent border-t border-white/10 px-3 sm:px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                            <span className="text-sm text-slate-300">Room ID:</span>
+                            <span className="hidden sm:display text-sm text-slate-300">
+                                Room ID:
+                            </span>
                             <code className="font-mono font-bold text-white text-sm">{roomId}</code>
                             <button
                                 onClick={() => copyToClipboard(roomId || "")}
@@ -230,7 +315,7 @@ const RoomPage = () => {
                                 {isMuted ? (
                                     <MicOff className="w-5 h-5 text-red-400" />
                                 ) : (
-                                    <Mic className="w-5 h-5 text-white" />
+                                    <Mic className="sm:w-5 sm:h-5 text-white" />
                                 )}
                             </button>
 

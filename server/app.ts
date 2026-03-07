@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
+import { createServer } from "http";
 
-const io = new Server(3000, {
+const httpServer = createServer();
+const io = new Server(httpServer, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
@@ -56,7 +58,8 @@ io.on("connection", (socket) => {
         }
         roomData.add(socket.id);
         socket.join(roomId);
-        io.to(roomId).emit("userJoined", "A new user has joined the room.");
+        socket.emit("joinedRoom", roomId);
+        socket.to(roomId).emit("userJoined", "A new user has joined the room.");
     });
     socket.on("exitRoom", (roomId) => {
         console.log("Exiting room:", roomId);
@@ -65,6 +68,7 @@ io.on("connection", (socket) => {
         if (roomData) {
             roomData.delete(socket.id);
         }
+        socket.to(roomId).emit("userExited", "A user has left the room.");
         socket.emit("roomExited", roomId);
     });
 
@@ -92,9 +96,19 @@ io.on("connection", (socket) => {
             if (room.has(socket.id)) {
                 room.delete(socket.id);
             }
+            for (const [roomId, roomData] of openRooms.entries()) {
+                if (roomData.has(socket.id)) {
+                    roomData.delete(socket.id);
+                    if (roomData.size === 0) {
+                        openRooms.delete(roomId);
+                    }
+                }
+            }
         });
         console.log("user disconnected");
     });
 });
 
-console.log("Socket.IO server running on port 3000");
+httpServer.listen(3001, "0.0.0.0", () => {
+    console.log("Socket.IO server running on port 3001");
+});

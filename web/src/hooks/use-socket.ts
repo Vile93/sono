@@ -6,7 +6,7 @@ export const useSocket = () => {
     const { socket, setSocket, setSocketPayload } = useSocketStore();
     useEffect(() => {
         if (!socket) {
-            const newSocket = io("http://localhost:3000");
+            const newSocket = io("http://localhost:3001");
             setSocket(newSocket);
             newSocket.on("connect", () => {
                 console.log("Connected to server");

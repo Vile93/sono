@@ -12,7 +12,7 @@ const Layout = () => {
                 toastClassName={(context) =>
                     `relative flex p-4 min-h-10 rounded-md justify-between overflow-hidden cursor-pointer shadow-2xl mb-4 border whitespace-pre-wrap ${
                         context?.type === "error"
-                            ? "bg-red-900/30 border-red-500/50 text-red-200"
+                            ? "bg-red-900 border-red-500/50 text-red-200"
                             : "bg-slate-800 border-slate-700 text-white"
                     }`
                 }
