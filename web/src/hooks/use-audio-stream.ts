@@ -5,7 +5,7 @@ type Props = {
     onSpeakingChange: (isSpeaking: boolean, isSpeakTimer: RefObject<number | null>) => void;
 };
 
-export const useAudioStream = ({ stream, onSpeakingChange, onReset }: Props) => {
+export const useAudioStream = ({ stream, onSpeakingChange }: Props) => {
     const isSpeakTimer = useRef<ReturnType<typeof setTimeout>>(null);
     useEffect(() => {
         if (stream) {

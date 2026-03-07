@@ -6,7 +6,13 @@ export const useSocket = () => {
     const { socket, setSocket, setSocketPayload } = useSocketStore();
     useEffect(() => {
         if (!socket) {
-            const newSocket = io("http://localhost:3001");
+            console.log(
+                import.meta.env.VITE_BACKEND_API,
+                /*  import.meta.env.VITE_TURN_SERVER_URL,
+                import.meta.env.VITE_TURN_SERVER_USERNAME,
+                import.meta.env.VITE_TURN_SERVER_CREDENTIAL, */
+            );
+            const newSocket = io(import.meta.env.VITE_BACKEND_API);
             setSocket(newSocket);
             newSocket.on("connect", () => {
                 console.log("Connected to server");

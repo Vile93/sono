@@ -131,7 +131,15 @@ const RoomPage = () => {
     useEffect(() => {
         const initializeConnection = async () => {
             if (socket && audio) {
-                const pc = new RTCPeerConnection();
+                const pc = new RTCPeerConnection({
+                    iceServers: [
+                        {
+                            urls: import.meta.env.VITE_TURN_SERVER_URL,
+                            username: import.meta.env.VITE_TURN_SERVER_USERNAME,
+                            credential: import.meta.env.VITE_TURN_SERVER_CREDENTIAL,
+                        },
+                    ],
+                });
                 pcRef.current = pc;
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: {
